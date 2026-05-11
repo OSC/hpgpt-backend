@@ -88,10 +88,10 @@ docx2txt==0.8 # Alternative DOCX processing
 # GitPython
 # pysrt
 # docx2txt
-# pydub
-# ffmpeg-python
-# ffprobe
-# ffmpeg
+pydub==0.25.1
+ffmpeg-python==0.2.0
+ffprobe==0.5
+ffmpeg==1.4
 # beautifulsoup4
 # PyMuPDF
 # pytesseract # image OCR

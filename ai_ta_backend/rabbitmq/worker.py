@@ -31,7 +31,7 @@ class Worker:
         self.consumer = None
         self.rabbitmq_url = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')
         self.rabbitmq_ssl = os.getenv('RABBITMQ_SSL', False)
-        self.rabbitmq_queue = os.getenv('RABBITMQ_QUEUE', 'uiuc-chat')
+        self.rabbitmq_queue = os.getenv('RABBITMQ_QUEUE', 'osc-chat')
         self.connection: pika.BlockingConnection | None = None
         self.channel: pika.adapters.blocking_connection.BlockingChannel | None = None
         self.connect()
