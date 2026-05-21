@@ -468,7 +468,7 @@ def export_convo_history_user_bg(conversations, count, user_email, s3_path, proj
       s3_url = s3.generatePresignedUrl('get_object', os.environ['S3_BUCKET_NAME'], s3_file, 172800)
 
       # send email
-      subject = f"UIUC.chat Conversation History Export Complete for {user_email}"
+      subject = f"OSC.chat Conversation History Export Complete for {user_email}"
       body_text = f"The data export for {user_email} is complete.\n\nYou can download the file from the following link: \n\n{s3_url}\n\nThis link will expire in 48 hours."
       email_status = send_email(subject, body_text, os.environ['EMAIL_SENDER'], [user_email], [])
       print(f"Email sent to {user_email}: {email_status}")
@@ -548,9 +548,9 @@ def export_data_in_bg_extended(response, download_type, course_name, s3_path):
     bcc_emails = []
 
     # Handle specific email cases
-    if 'rohan13@illinois.edu' in admin_emails:
-      admin_emails.remove('rohan13@illinois.edu')
-      bcc_emails.append('rohan13@illinois.edu')
+    if 'skhuvis@osc.edu' in admin_emails:
+      admin_emails.remove('skhuvis@osc.edu')
+      bcc_emails.append('skhuvis@osc.edu')
 
     admin_emails.append(course_metadata['course_owner'])
     admin_emails = list(set(admin_emails))
@@ -559,7 +559,7 @@ def export_data_in_bg_extended(response, download_type, course_name, s3_path):
       return "No admin emails found. Email not sent."
 
     # Send email notification to course admins
-    subject = "UIUC.chat Conversation History Export Complete for " + course_name
+    subject = "OSC.chat Conversation History Export Complete for " + course_name
     body_text = "The data export for " + course_name + " is complete.\n\nYou can download the file from the following link: \n\n" + s3_url + "\n\nThis link will expire in 48 hours."
     email_status = send_email(subject, body_text, os.environ['EMAIL_SENDER'], admin_emails, bcc_emails)
     print("email_status: ", email_status)
@@ -652,9 +652,9 @@ def export_data_in_bg(response, download_type, course_name, s3_path):
     bcc_emails = []
 
     # check for Kastan's email and move to bcc
-    if 'rohan13@illinois.edu' in admin_emails:
-      admin_emails.remove('rohan13@illinois.edu')
-      bcc_emails.append('rohan13@illinois.edu')
+    if 'skhuvis@osc.edu' in admin_emails:
+      admin_emails.remove('skhuvis@osc.edu')
+      bcc_emails.append('skhuvis@osc.edu')
 
     # add course owner email to admin_emails
     admin_emails.append(course_metadata['course_owner'])
@@ -668,11 +668,11 @@ def export_data_in_bg(response, download_type, course_name, s3_path):
 
     # send email to admins
     if download_type == "documents":
-      subject = "UIUC.chat Documents Export Complete for " + course_name
+      subject = "OSC.chat Documents Export Complete for " + course_name
     elif download_type == "conversations":
-      subject = "UIUC.chat Conversation History Export Complete for " + course_name
+      subject = "OSC.chat Conversation History Export Complete for " + course_name
     else:
-      subject = "UIUC.chat Export Complete for " + course_name
+      subject = "OSC.chat Export Complete for " + course_name
     body_text = "The data export for " + course_name + " is complete.\n\nYou can download the file from the following link: \n\n" + s3_url + "\n\nThis link will expire in 48 hours."
     email_status = send_email(subject, body_text, os.environ['EMAIL_SENDER'], admin_emails, bcc_emails)
     print("email_status: ", email_status)
@@ -765,11 +765,11 @@ def export_data_in_bg_emails(response, download_type, course_name, s3_path, emai
 
     # send email to admins
     if download_type == "documents":
-      subject = "UIUC.chat Documents Export Complete for " + course_name
+      subject = "OSC.chat Documents Export Complete for " + course_name
     elif download_type == "conversations":
-      subject = "UIUC.chat Conversation History Export Complete for " + course_name
+      subject = "OSC.chat Conversation History Export Complete for " + course_name
     else:
-      subject = "UIUC.chat Export Complete for " + course_name
+      subject = "OSC.chat Export Complete for " + course_name
     body_text = "The data export for " + course_name + " is complete.\n\nYou can download the file from the following link: \n\n" + s3_url + "\n\nThis link will expire in 48 hours."
     email_status = send_email(subject, body_text, os.environ['EMAIL_SENDER'], admin_emails, bcc_emails)
     print("email_status: ", email_status)

@@ -68,7 +68,7 @@ def index() -> Response:
       JSON: _description_
   """
   response = jsonify(
-      {"hi there, this is a 404": "Welcome to UIUC.chat backend 🚅 Read the docs here: https://docs.uiuc.chat/ "})
+      {"hi there, this is a 404": "Welcome to OSC.chat backend 🚅 Read the docs here: https://docs.osc.chat/ "})
   response.headers.add('Access-Control-Allow-Origin', '*')
   return response
 
@@ -817,7 +817,7 @@ def canvas_ingest() -> Response:
 @app.route('/createProject', methods=['POST'])
 def createProject(service: ProjectService, flaskExecutor: ExecutorInterface) -> Response:
   """
-  Create a new project in UIUC.Chat
+  Create a new project in OSC.Chat
   """
   data = request.get_json()
   project_name = data.get('project_name', '')

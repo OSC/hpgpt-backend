@@ -35,10 +35,10 @@ from ai_ta_backend.service.posthog_service import PosthogService
 from ai_ta_backend.service.sentry_service import SentryService
 from qdrant_client.http import models
 
-# Qwen query instruction for Illinois Chat retrieval.
+# Qwen query instruction for OSC Chat retrieval.
 # Docs are embedded without instruction during ingest; only queries get this prefix.
 DEFAULT_QWEN_QUERY_INSTRUCTION = (
-    "Given a user search query, retrieve the most relevant passages from the Illinois Chat knowledge "
+    "Given a user search query, retrieve the most relevant passages from the OSC Chat knowledge "
     "base stored in Qdrant to answer the query accurately. Prioritize authoritative course materials, "
     "syllabi, FAQs, official documentation, web pages, and other relevant sources. Ignore boilerplate/navigation text."
 )
@@ -57,7 +57,7 @@ class RetrievalService:
     self.sentry = sentry
     self.posthog = posthog
     self.thread_pool_executor = thread_pool_executor
-    self.openai_api_key = os.getenv("OPENAI_API_KEY") if os.getenv("OPENAI_API_KEY") else os.getenv("NCSA_HOSTED_API_KEY")
+    self.openai_api_key = os.getenv("OPENAI_API_KEY") if os.getenv("OPENAI_API_KEY") else os.getenv("OSC_HOSTED_API_KEY")
     self.embedding_model = os.getenv('EMBEDDING_MODEL') if os.getenv('EMBEDDING_MODEL') else 'text-embedding-ada-002'
     self.openai_api_base = os.getenv('EMBEDDING_API_BASE') if os.getenv('EMBEDDING_API_BASE') else 'https://api.openai.com/v1'
 
@@ -82,7 +82,7 @@ class RetrievalService:
 
     self.nomic_embeddings = OllamaEmbeddings(base_url=os.environ['OLLAMA_SERVER_URL'], model='nomic-embed-text:v1.5')
 
-    # Allow override via env; fallback to sane default for Illinois Chat retrieval.
+    # Allow override via env; fallback to sane default for OSC Chat retrieval.
     self.qwen_query_instruction = os.getenv('QWEN_QUERY_INSTRUCTION', DEFAULT_QWEN_QUERY_INSTRUCTION)
 
     # self.llm = AzureChatOpenAI(
@@ -214,9 +214,11 @@ class RetrievalService:
         list of dictionaries with distinct s3 path, readable_filename and course_name, url, base_url.
     """
 
+    print('in getAll retrieval service function on backend')
     response = self.sqlDb.getAllMaterialsForCourse(course_name)
 
     data = response["data"]
+    print(f'data: {data}')
     unique_combinations = set()
     distinct_dicts = []
 
@@ -238,7 +240,7 @@ class RetrievalService:
 
     from ai_ta_backend.utils.email.send_transactional_email import send_email
 
-    client = OllamaClient(os.environ['OLLAMA_SERVER_URL'], api_key=os.environ['NCSA_HOSTED_API_KEY'])
+    client = OllamaClient(os.environ['OLLAMA_SERVER_URL'], api_key=os.environ['OSC_HOSTED_API_KEY'])
 
     response = self.sqlDb.getMessagesFromConvoID(conversation_id)
     messages = response["data"] if isinstance(response, dict) else response.data
@@ -321,8 +323,8 @@ class RetrievalService:
 
           send_email(subject=f"LLM Monitor Alert - {', '.join(alert_categories)}",
                      body_text=alert_body,
-                     sender="hi@uiuc.chat",
-                     recipients=["hbroome@illinois.edu", "rohan13@illinois.edu"],
+                     sender="oschelp@osc.edu",
+                     recipients=["skhuvis@osc.edu"],
                      bcc_recipients=[])
       else:
         llm_monitor_tags["status"] = "safe"

@@ -40,7 +40,7 @@ class VectorDatabase():
 
     try:
       # No major uptime guarantees
-      self.cropwizard_qdrant_client = QdrantClient(url="https://cropwizard-qdrant.ncsa.ai",
+      self.cropwizard_qdrant_client = QdrantClient(url="https://cropwizard-qdrant.osc.ai",
                                                    port=443,
                                                    https=True,
                                                    api_key=os.environ['QDRANT_API_KEY'])
@@ -48,7 +48,7 @@ class VectorDatabase():
       print(f"Error in cropwizard_qdrant_client: {e}")
       self.cropwizard_qdrant_client = None
 
-    # self.openai_api_key = os.getenv('OPENAI_API_KEY') if os.getenv('OPENAI_API_KEY') else os.getenv('NCSA_HOSTED_API_KEY')
+    # self.openai_api_key = os.getenv('OPENAI_API_KEY') if os.getenv('OPENAI_API_KEY') else os.getenv('OSC_HOSTED_API_KEY')
     # self.vectorstore = Qdrant(client=self.qdrant_client,
     #                           collection_name=os.environ['QDRANT_COLLECTION_NAME'],
     #                           embeddings=OpenAIEmbeddings(openai_api_key=self.openai_api_key))

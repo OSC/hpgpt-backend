@@ -57,7 +57,7 @@ class ProjectService:
             value = {
                 "is_private": is_private,
                 "course_owner": project_owner_email,
-                "course_admins": ['rohan13@illinois.edu'],
+                "course_admins": ['skhuvis@osc.edu'],
                 "approved_emails_list": None,
                 "example_questions": None,
                 "banner_image_s3": None,

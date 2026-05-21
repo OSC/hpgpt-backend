@@ -21,7 +21,7 @@ sql_session = SQLAlchemyIngestDB()
 class Queue:
 
     def __init__(self):
-        self.rabbitmq_queue = os.getenv('RABBITMQ_QUEUE', 'uiuc-chat')
+        self.rabbitmq_queue = os.getenv('RABBITMQ_QUEUE', 'osc-chat')
         self.rabbitmq_url = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')
         self.rabbitmq_ssl = os.getenv('RABBITMQ_SSL', False)
         self.connect()

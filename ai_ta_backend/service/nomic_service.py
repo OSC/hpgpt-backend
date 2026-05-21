@@ -69,7 +69,7 @@ class NomicService():
 
   def update_conversation_maps(self):
     """
-    Updates all conversation maps in UIUC.Chat. To be called via a CRON job.
+    Updates all conversation maps in OSC.Chat. To be called via a CRON job.
     Returns:
         str: 'success' or error message
     """
@@ -145,7 +145,7 @@ class NomicService():
 
   def update_document_maps(self):
     """
-    Updates all document maps in UIUC.Chat by processing and uploading documents in batches.
+    Updates all document maps in OSC.Chat by processing and uploading documents in batches.
     
     Returns:
         str: Status of document maps update process

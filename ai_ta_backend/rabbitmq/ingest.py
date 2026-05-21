@@ -69,7 +69,7 @@ class Ingest:
     def __init__(self):
         self.openai_api_key = os.getenv('OPENAI_API_KEY') if os.getenv('OPENAI_API_KEY') else None
         self.openai_api_base = os.getenv('EMBEDDING_API_BASE') + "/embeddings" if os.getenv('EMBEDDING_API_BASE') else 'https://api.openai.com/v1/embeddings'
-        self.ncsa_hosted_api_key = self.openai_api_key if self.openai_api_key else os.getenv('NCSA_HOSTED_API_KEY')
+        self.osc_hosted_api_key = self.openai_api_key if self.openai_api_key else os.getenv('OSC_HOSTED_API_KEY')
         self.embedding_model = os.getenv('EMBEDDING_MODEL') if os.getenv('EMBEDDING_MODEL') else 'text-embedding-ada-002'
         self.qdrant_url = os.getenv('QDRANT_URL')
         self.qdrant_api_key = os.getenv('QDRANT_API_KEY')
@@ -111,7 +111,7 @@ class Ingest:
                 self.vectorstore = Qdrant(
                     client=self.qdrant_client,
                     collection_name=self.qdrant_collection_name,
-                    embeddings=OpenAIEmbeddings(openai_api_type='openai', openai_api_key=self.ncsa_hosted_api_key, 
+                    embeddings=OpenAIEmbeddings(openai_api_type='openai', openai_api_key=self.osc_hosted_api_key, 
                                                 openai_api_base=self.openai_api_base, model=self.embedding_model)
                 )
                 print("Vectorstore initialized with text-embedding-ada-002")
@@ -119,10 +119,10 @@ class Ingest:
                 self.vectorstore = Qdrant(
                     client=self.qdrant_client,
                     collection_name=self.qdrant_collection_name,
-                    embeddings=OpenAIEmbeddings(openai_api_type='openai', openai_api_key=self.ncsa_hosted_api_key, 
+                    embeddings=OpenAIEmbeddings(openai_api_type='openai', openai_api_key=self.osc_hosted_api_key, 
                                                 openai_api_base=self.openai_api_base, model=self.embedding_model, tiktoken_enabled=False)
                 )
-                print("Vectorstore initialized with NCSA_HOSTED model")
+                print("Vectorstore initialized with OSC_HOSTED model")
         else:
             logging.error("QDRANT API KEY OR URL NOT FOUND!")
 
@@ -385,7 +385,7 @@ class Ingest:
             oai = OpenAIAPIProcessor(
                 input_prompts_list=input_texts,
                 request_url=self.openai_api_base,
-                api_key=self.ncsa_hosted_api_key,
+                api_key=self.osc_hosted_api_key,
                 max_requests_per_minute=10_000,
                 max_tokens_per_minute=10_000_000,
                 token_encoding_name='cl100k_base',

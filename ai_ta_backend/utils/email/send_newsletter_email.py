@@ -178,9 +178,8 @@ if __name__ == "__main__":
     html_content = file.read()
 
     success_or_fail = send_html_email(
-        subject="UIUC.chat Product Update 1",
+        subject="OSC.chat Product Update 1",
         html_text=html_content,
-        sender="rohan13@illinois.edu",
+        sender="oschelp@osc.edu",
     )
-    # receipients=["rohan13@illinois.edu"])
     print("success_or_fail:", success_or_fail)

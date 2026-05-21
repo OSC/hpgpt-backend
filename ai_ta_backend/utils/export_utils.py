@@ -132,7 +132,7 @@ def _create_markdown_for_user_convo_export(s3, convo_id, messages, markdown_dir,
 
     with open(markdown_file_path, 'w') as md_file:
       # md_file.write(f"Conversation ID: {convo_id}\n")
-      md_file.write(f"## **UIUC Chat Conversation for Project**: {project_name}\n\n")
+      md_file.write(f"## **OSC Chat Conversation for Project**: {project_name}\n\n")
       md_file.write(f"## **User Email**: {user_email}\n\n")
       md_file.write(f"Date Time: {timestamp}\n\n")
 
