@@ -32,5 +32,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: docker-registry.osc.edu/osc/hpcgpt_backend:${{ env.IMAGE_TAG }}
+          tags: docker-registry.osc.edu/kubernetes/hpcgpt/backend:${{ env.IMAGE_TAG }}
           file: Self-Hosted-Dockerfile
