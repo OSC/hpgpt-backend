@@ -44,6 +44,7 @@ from ai_ta_backend.service.workflow_service import WorkflowService
 from ai_ta_backend.utils.email.send_transactional_email import send_email
 from ai_ta_backend.utils.pubmed_extraction import extractPubmedData
 from ai_ta_backend.utils.rerun_webcrawl_for_project import webscrape_documents
+from ai_ta_backend.rabbitmq import models
 from ai_ta_backend.rabbitmq.rmqueue import Queue
 from ai_ta_backend.rabbitmq.ingest_canvas import IngestCanvas
 
@@ -92,7 +93,7 @@ def health() -> Response:
 @app.route('/getTopContexts', methods=['POST'])
 def getTopContexts(service: RetrievalService) -> Response:
   """Get most relevant contexts for a given search query.
-  
+
   Return value
 
   ## POST body
@@ -101,14 +102,17 @@ def getTopContexts(service: RetrievalService) -> Response:
   search_query
   token_limit
   doc_groups
-  
+  group (optional) str
+      Keycloak group for group-specific embedding URL.
+
   Example Request Body:
   ```json
   {
     "search_query": "What is a finite state machine?",
     "course_name": "ECE_385",
     "doc_groups": ["lectures", "readings"],
-    "top_n": 5
+    "top_n": 5,
+    "group": "PDE0050"
   }
   ```
 
@@ -120,15 +124,15 @@ def getTopContexts(service: RetrievalService) -> Response:
   * pagenumber_or_timestamp
   * readable_filename
   * s3_pdf_path
-  
-  Example: 
+
+  Example:
   [
     {
-      'readable_filename': 'Lumetta_notes', 
-      'pagenumber_or_timestamp': 'pg. 19', 
-      's3_pdf_path': '/courses/<course>/Lumetta_notes.pdf', 
+      'readable_filename': 'Lumetta_notes',
+      'pagenumber_or_timestamp': 'pg. 19',
+      's3_pdf_path': '/courses/<course>/Lumetta_notes.pdf',
       'text': 'In FSM, we do this...'
-    }, 
+    },
   ]
 
   Raises
@@ -143,6 +147,7 @@ def getTopContexts(service: RetrievalService) -> Response:
   doc_groups: List[str] = data.get('doc_groups', [])
   top_n: int = data.get('top_n', 100)
   conversation_id: str = data.get('conversation_id', '')
+  group: str | None = data.get('group', None)
 
   if search_query == '' or course_name == '':
     # proper web error "400 Bad request"
@@ -152,7 +157,7 @@ def getTopContexts(service: RetrievalService) -> Response:
         f"Missing one or more required parameters: 'search_query' and 'course_name' must be provided. Search query: `{search_query}`, Course name: `{course_name}`"
     )
 
-  found_documents = asyncio.run(service.getTopContexts(search_query, course_name, doc_groups, top_n, conversation_id))
+  found_documents = asyncio.run(service.getTopContexts(search_query, course_name, doc_groups, top_n, conversation_id, group))
   response = jsonify(found_documents)
   response.headers.add('Access-Control-Allow-Origin', '*')
   print(f"⏰ Runtime of getTopContexts in main.py: {(time.monotonic() - start_time):.2f} seconds")
@@ -966,6 +971,43 @@ def getPrimeKGContexts(graph_db: GraphDatabase) -> Response:
 
   results = graph_db.getPrimeKGContexts(user_query)
   response = jsonify(results)
+  response.headers.add('Access-Control-Allow-Origin', '*')
+  return response
+
+@app.route('/updateProjectGroup', methods=['POST'])
+def updateProjectGroup(sql_db: SQLDatabase) -> Response:
+  """
+  Update the Keycloak group associated with a project in the PostgreSQL database.
+  """
+  data = request.get_json()
+  project_name = data.get('project_name', '')
+  group = data.get('group', None)
+
+  if project_name == '':
+    abort(400, description="Missing required parameter: 'project_name' must be provided.")
+
+  print(f"Updating project group for: {project_name}, group: {group}")
+
+  response = jsonify({'success': True})
+  try:
+    # Use the Session factory to create a session
+    session = sql_db.Session()
+    try:
+      # Update the group in the projects table
+      session.query(models.Project).filter(
+        models.Project.course_name == project_name
+      ).update({models.Project.group: group})
+      session.commit()
+    except Exception as e:
+      session.rollback()
+      logging.error(f"Error updating project group: {e}")
+      response = jsonify({'success': False, 'error': str(e)})
+    finally:
+      session.close()
+  except Exception as e:
+    logging.error(f"Error in updateProjectGroup: {e}")
+    response = jsonify({'success': False, 'error': str(e)})
+
   response.headers.add('Access-Control-Allow-Origin', '*')
   return response
 

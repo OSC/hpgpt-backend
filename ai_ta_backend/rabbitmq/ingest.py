@@ -168,12 +168,19 @@ class Ingest:
 
             content: str | List[str] | None = inputs.get('content', None)  # defined if ingest type is webtext
             doc_groups: List[str] | str = inputs.get('groups', '')
+            group: str | None = inputs.get('group', None)  # Keycloak group for this project
+
+            # If no group provided, query it from the projects table
+            if not group:
+                group = self.sql_session.get_project_group(course_name) if hasattr(self.sql_session, 'get_project_group') else None
+                if group:
+                    logging.info(f"Using project group: {group} for course: {course_name}")
 
             print(
-                f"In top of /ingest route. course: {course_name}, s3paths: {s3_paths}, readable_filename: {readable_filename}, base_url: {base_url}, url: {url}, content: {content}, doc_groups: {doc_groups}"
+                f"In top of /ingest route. course: {course_name}, s3paths: {s3_paths}, readable_filename: {readable_filename}, base_url: {base_url}, url: {url}, content: {content}, doc_groups: {doc_groups}, group: {group}"
             )
             success_fail_dict = self.run_ingest(course_name, s3_paths, base_url, url, readable_filename, content,
-                                                doc_groups, force_embeddings)
+                                                doc_groups, force_embeddings, group=group)
             for retry_num in range(1, 3):
                 if isinstance(success_fail_dict, str):  # TODO: What does this indicate?
                     success_fail_dict = self.run_ingest(course_name, s3_paths, base_url, url, readable_filename, content,
@@ -211,17 +218,17 @@ class Ingest:
             return json.dumps(success_fail_dict)
 
     def run_ingest(self, course_name, s3_paths, base_url, url, readable_filename, content, document_groups,
-                   force_embeddings=False):
+                   force_embeddings=False, group: str | None = None):
         """Routes ingest jobs based on the input data -> webscrape, url, readable_filename"""
         if content:
             return self.ingest_single_web_text(course_name, base_url, url, content, readable_filename,
-                                               groups=document_groups, force_embeddings=force_embeddings)
+                                               groups=document_groups, force_embeddings=force_embeddings, group=group)
         elif readable_filename == '':
             return self.bulk_ingest(course_name, s3_paths, base_url=base_url, url=url,
-                                    groups=document_groups, force_embeddings=force_embeddings)
+                                    groups=document_groups, force_embeddings=force_embeddings, group=group)
         else:
             return self.bulk_ingest(course_name, s3_paths, base_url=base_url, url=url,
-                                    groups=document_groups, readable_filename=readable_filename, force_embeddings=force_embeddings)
+                                    groups=document_groups, readable_filename=readable_filename, force_embeddings=force_embeddings, group=group)
 
     def bulk_ingest(self, course_name: str, s3_paths: Union[str, List[str]],
                   force_embeddings: bool, **kwargs) -> Dict[str, None | str | Dict[str, str]]:
@@ -378,13 +385,30 @@ class Ingest:
             for i, context in enumerate(contexts):
                 context.metadata['chunk_index'] = i
                 context.metadata['doc_groups'] = kwargs.get('groups', [])
+                # Add project-level group (Keycloak group) to metadata for tracking
+                context.metadata['group'] = kwargs.get('group', None)
 
             # Generate embeddings from OpenAI
             logging.info(f"Generating embeddings for {len(input_texts)} texts")
             embeddings_start_time = time.monotonic()
+
+            # Construct group-specific embedding URL if group is provided
+            group = kwargs.get('group', None)
+            embedding_request_url = self.openai_api_base
+            if group:
+                try:
+                    from urllib.parse import urlparse, urlunparse
+                    parsed = urlparse(self.openai_api_base)
+                    new_netloc = f"{group}.{parsed.netloc}"
+                    embedding_request_url = urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+                    logging.info(f"Using group-specific embedding URL: {embedding_request_url} for group: {group}")
+                except Exception as e:
+                    logging.error(f"Error constructing group-specific embedding URL: {e}")
+                    # Fall back to default URL on error
+
             oai = OpenAIAPIProcessor(
                 input_prompts_list=input_texts,
-                request_url=self.openai_api_base,
+                request_url=embedding_request_url,
                 api_key=self.osc_hosted_api_key,
                 max_requests_per_minute=10_000,
                 max_tokens_per_minute=10_000_000,

@@ -177,6 +177,7 @@ class Project(Base):
     subscribed = Column(BigInteger, ForeignKey('doc_groups.id', onupdate='CASCADE', ondelete='SET NULL'))
     description = Column(Text)
     metadata_schema = Column(JSON)
+    group = Column(Text)  # Keycloak group associated with this project
 
     __table_args__ = (
         Index('projects_course_name_key', 'course_name', postgresql_using='btree'),
@@ -195,7 +196,8 @@ class Project(Base):
             "last_uploaded_convo_id": self.last_uploaded_convo_id,
             "subscribed": self.subscribed,
             "description": self.description,
-            "metadata_schema": self.metadata_schema
+            "metadata_schema": self.metadata_schema,
+            "group": self.group
         }
 
 

@@ -251,3 +251,11 @@ class SQLAlchemyIngestDB:
         with self.get_session() as session:
             result = session.execute(delete_stmt)
             return result.rowcount  # Number of rows deleted
+
+    def get_project_group(self, course_name: str) -> str | None:
+        """Get the Keycloak group associated with a project"""
+        from sqlalchemy import text
+        query = select(models.Project.group).where(models.Project.course_name == course_name)
+        with self.get_session() as session:
+            result = session.execute(query).scalar()
+            return result

@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import os
+import sys
 import time
 import traceback
 from collections import defaultdict
@@ -99,7 +100,8 @@ class RetrievalService:
                            course_name: str,
                            doc_groups: List[str] | None = None,
                            top_n: int = 100,
-                           conversation_id: str = '') -> Union[List[Dict], str]:
+                           conversation_id: str = '',
+                           group: str = '') -> Union[List[Dict], str]:
     """Here's a summary of the work.
 
         /GET arguments
@@ -132,7 +134,10 @@ class RetrievalService:
       # time to vector search: 0.48 seconds
       # Total time: 0.9 seconds
 
-      if course_name == "vyriad":
+      # Use group-specific embedding client if group is provided
+      if group:
+        embedding_client = self._create_embeddings_with_group(group)
+      elif course_name == "vyriad":
         embedding_client = self.nomic_embeddings
       elif course_name == "pubmed" or course_name == "patents":
         embedding_client = self.nomic_embeddings
@@ -594,6 +599,25 @@ class RetrievalService:
           f"Runtime for capture search succeeded event: {time_for_capture_search_succeeded_event:.2f} seconds")
     return found_docs
 
+  def _create_embeddings_with_group(self, group: str | None = None):
+    if group is None:
+        return self.embeddings
+
+    try:
+        from urllib.parse import urlparse, urlunparse
+        parsed = urlparse(self.openai_api_base)
+        new_netloc = f"{group}.{parsed.netloc}"
+        group_api_base = urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+        return OpenAIEmbeddings(
+            model=self.embedding_model,
+            openai_api_key=self.openai_api_key,
+            openai_api_base=group_api_base,
+            tiktoken_enabled=False,
+        )
+    except Exception as e:
+        logging.error(f"Error constructing group-specific embedding URL: {e}")
+        return self.embeddings
+
   def _embed_query_and_measure_latency(self, search_query, embedding_client, query_instruction: str | None = None):
     openai_start_time = time.monotonic()
     text_to_embed = search_query
@@ -607,7 +631,11 @@ class RetrievalService:
     if query_instruction and isinstance(embedding_client, OpenAIEmbeddings) and 'qwen' in str(model_name).lower():
       text_to_embed = f"Instruct: {query_instruction}\nQuery:{search_query}"
 
-    user_query_embedding = embedding_client.embed_query(text_to_embed)
+    try:
+      user_query_embedding = embedding_client.embed_query(text_to_embed)
+    except Exception as e:
+      logging.error(f"Embedding failed for query: '{text_to_embed[:100]}...', error: {e}")
+      raise
     self.openai_embedding_latency = time.monotonic() - openai_start_time
     return user_query_embedding
 
