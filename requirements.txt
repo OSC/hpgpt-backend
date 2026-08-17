@@ -32,7 +32,7 @@ flask-executor==1.0.0
 flask-sqlalchemy==3.0.0
 retry==0.9.2
 XlsxWriter==3.2.2
-PyMuPDF==1.23.6
+PyMuPDF==1.24.6
 pytesseract==0.3.10
 openpyxl==3.1.2
 networkx==3.2.1
@@ -70,13 +70,13 @@ sentry-sdk==2.21.0
 ollama==0.4.7
 
 # File processing libraries for chat uploads
-PyMuPDF==1.23.6
-pdfplumber==0.11.0
-pytesseract==0.3.10 # image OCR
+#PyMuPDF==1.23.6
+#pdfplumber==0.11.0
+#pytesseract==0.3.10 # image OCR
 python-docx==0.8.11 # DOCX files
-openpyxl==3.1.2 # excel
-python-pptx==0.6.23 # PowerPoint
-beautifulsoup4==4.12.2 # HTML parsing
+#openpyxl==3.1.2 # excel
+#python-pptx==0.6.23 # PowerPoint
+#beautifulsoup4==4.12.2 # HTML parsing
 pysrt==1.1.2 # SRT subtitle files
 Pillow==10.0.0 # Image processing for OCR
 docx2txt==0.8 # Alternative DOCX processing
