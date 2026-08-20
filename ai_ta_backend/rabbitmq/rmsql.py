@@ -259,3 +259,11 @@ class SQLAlchemyIngestDB:
         with self.get_session() as session:
             result = session.execute(query).scalar()
             return result
+
+    def get_project_owner(self, course_name: str) -> str | None:
+        """Get the username of the owner of a project"""
+        from sqlalchemy import text
+        query = select(models.Project.course_owner_username).where(models.Project.course_name == course_name)
+        with self.get_session() as session:
+            result = session.execute(query).scalar()
+            return result

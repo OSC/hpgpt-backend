@@ -1221,6 +1221,7 @@ class Ingest():
           max_tokens_per_minute=10_000_000,
           max_attempts=1_000,
           logging_level=logging.INFO,
+          osc_username=None,
           token_encoding_name='cl100k_base')
       asyncio.run(oai.process_api_requests_from_file())
       print(f"⏰ embeddings runtime: {(time.monotonic() - embeddings_start_time):.2f} seconds")

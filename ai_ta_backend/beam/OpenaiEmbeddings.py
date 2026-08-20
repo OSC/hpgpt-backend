@@ -118,7 +118,7 @@ import tiktoken  # for counting tokens
 class OpenAIAPIProcessor:
 
   def __init__(self, input_prompts_list, request_url, api_key, max_requests_per_minute, max_tokens_per_minute,
-               token_encoding_name, max_attempts, logging_level):
+               token_encoding_name, max_attempts, logging_level, osc_username: str | None = None):
     self.request_url = request_url
     self.api_key = api_key
     self.max_requests_per_minute = max_requests_per_minute
@@ -129,6 +129,7 @@ class OpenAIAPIProcessor:
     self.input_prompts_list: List[dict] = input_prompts_list
     self.results = []
     self.cleaned_results: List[str] = []
+    self.osc_username = osc_username
 
   async def process_api_requests_from_file(self):
     """Processes API requests in parallel, throttling to stay under rate limits."""
@@ -143,6 +144,8 @@ class OpenAIAPIProcessor:
     # infer API endpoint and construct request header
     api_endpoint = api_endpoint_from_url(self.request_url)
     request_header = {"Authorization": f"Bearer {self.api_key}"}
+    if self.osc_username:
+        request_header['x-osc-user'] = self.osc_username
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()

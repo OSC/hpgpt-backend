@@ -101,7 +101,8 @@ class RetrievalService:
                            doc_groups: List[str] | None = None,
                            top_n: int = 100,
                            conversation_id: str = '',
-                           group: str = '') -> Union[List[Dict], str]:
+                           group: str = '',
+                           username: str | None = None) -> Union[List[Dict], str]:
     """Here's a summary of the work.
 
         /GET arguments
@@ -135,8 +136,8 @@ class RetrievalService:
       # Total time: 0.9 seconds
 
       # Use group-specific embedding client if group is provided
-      if group:
-        embedding_client = self._create_embeddings_with_group(group)
+      if group or username:
+        embedding_client = self._create_embeddings_with_group(group, username)
       elif course_name == "vyriad":
         embedding_client = self.nomic_embeddings
       elif course_name == "pubmed" or course_name == "patents":
@@ -599,7 +600,7 @@ class RetrievalService:
           f"Runtime for capture search succeeded event: {time_for_capture_search_succeeded_event:.2f} seconds")
     return found_docs
 
-  def _create_embeddings_with_group(self, group: str | None = None):
+  def _create_embeddings_with_group(self, group: str | None = None, username: str | None = None):
     if group is None:
         return self.embeddings
 
@@ -608,12 +609,26 @@ class RetrievalService:
         parsed = urlparse(self.openai_api_base)
         new_netloc = f"{group}.{parsed.netloc}"
         group_api_base = urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
-        return OpenAIEmbeddings(
-            model=self.embedding_model,
-            openai_api_key=self.openai_api_key,
-            openai_api_base=group_api_base,
-            tiktoken_enabled=False,
-        )
+
+        headers = {}
+        if username:
+            headers['x-osc-user'] = username
+
+        if headers:
+            return OpenAIEmbeddings(
+                model=self.embedding_model,
+                openai_api_key=self.openai_api_key,
+                openai_api_base=group_api_base,
+                tiktoken_enabled=False,
+                model_kwargs={"extra_headers": headers},
+            )
+        else:
+            return OpenAIEmbeddings(
+                model=self.embedding_model,
+                openai_api_key=self.openai_api_key,
+                openai_api_base=group_api_base,
+                tiktoken_enabled=False,
+            )
     except Exception as e:
         logging.error(f"Error constructing group-specific embedding URL: {e}")
         return self.embeddings

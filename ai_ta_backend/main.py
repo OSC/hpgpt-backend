@@ -148,6 +148,7 @@ def getTopContexts(service: RetrievalService) -> Response:
   top_n: int = data.get('top_n', 100)
   conversation_id: str = data.get('conversation_id', '')
   group: str | None = data.get('group', None)
+  username: str | None = data.get('username', None)
 
   if search_query == '' or course_name == '':
     # proper web error "400 Bad request"
@@ -157,7 +158,7 @@ def getTopContexts(service: RetrievalService) -> Response:
         f"Missing one or more required parameters: 'search_query' and 'course_name' must be provided. Search query: `{search_query}`, Course name: `{course_name}`"
     )
 
-  found_documents = asyncio.run(service.getTopContexts(search_query, course_name, doc_groups, top_n, conversation_id, group))
+  found_documents = asyncio.run(service.getTopContexts(search_query, course_name, doc_groups, top_n, conversation_id, group, username))
   response = jsonify(found_documents)
   response.headers.add('Access-Control-Allow-Origin', '*')
   print(f"⏰ Runtime of getTopContexts in main.py: {(time.monotonic() - start_time):.2f} seconds")
@@ -747,6 +748,10 @@ def ingest() -> Response:
   data = request.get_json()
   logging.info("Data received: %s", data)
 
+  username: str | None = data.get('username')
+  if username:
+    data['username'] = username
+
   # TODO: Authentication?
 
   job_id = active_queue.addJobToIngestQueue(data)
@@ -828,16 +833,16 @@ def createProject(service: ProjectService, flaskExecutor: ExecutorInterface) -> 
   project_name = data.get('project_name', '')
   project_description = data.get('project_description', '')
   project_owner_email = data.get('project_owner_email', '')
+  project_owner_username = data.get('project_owner_username', None)
   is_private = data.get('is_private', False)
 
   if project_name == '':
     # proper web error "400 Bad request"
     abort(400, description=f"Missing one or more required parameters: 'project_name' must be provided.")
-  print(f"In /createProject for: {project_name}")
-  result = service.create_project(project_name, project_description, project_owner_email, is_private)
+  result = service.create_project(project_name, project_description, project_owner_email, project_owner_username, is_private)
 
   # Do long-running LLM task in the background.
-  flaskExecutor.submit(service.generate_json_schema, project_name, project_description)
+  flaskExecutor.submit(service.generate_json_schema, project_name, project_description, project_owner_username)
 
   response = jsonify(result)
   response.headers.add('Access-Control-Allow-Origin', '*')
@@ -985,8 +990,6 @@ def updateProjectGroup(sql_db: SQLDatabase) -> Response:
 
   if project_name == '':
     abort(400, description="Missing required parameter: 'project_name' must be provided.")
-
-  print(f"Updating project group for: {project_name}, group: {group}")
 
   response = jsonify({'success': True})
   try:

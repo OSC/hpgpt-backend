@@ -27,7 +27,8 @@ class ProjectService:
         print("Connecting to Redis... with url: ", os.environ['REDIS_URL'])
         self.redis_client = redis.Redis.from_url(os.environ['REDIS_URL'], db=0)
 
-    def generate_json_schema(self, project_name: str, project_description: str | None) -> None:
+    def generate_json_schema(self, project_name: str, project_description: str | None,
+                               project_owner_username: str | None = None) -> None:
         # Generate metadata schema using project_name and project_description
         json_schema = generate_schema_from_project_description(project_name, project_description)
 
@@ -37,10 +38,12 @@ class ProjectService:
             "description": project_description,
             "metadata_schema": json_schema,
         }
+        if project_owner_username:
+            sql_row["course_owner_username"] = project_owner_username
         self.sqlDb.insertProject(sql_row)
 
     def create_project(self, project_name: str, project_description: str | None, project_owner_email: str,
-                       is_private: bool = False) -> str:
+                       project_owner_username: str | None = None, is_private: bool = False) -> str:
         """
             This function takes in a project name and description and creates a project in the database.
             1. Generate metadata schema using project_name and project_description

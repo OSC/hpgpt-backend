@@ -169,8 +169,12 @@ class Ingest:
             content: str | List[str] | None = inputs.get('content', None)  # defined if ingest type is webtext
             doc_groups: List[str] | str = inputs.get('groups', '')
             group: str | None = inputs.get('group', None)  # Keycloak group for this project
+            username: str | None = inputs.get('username', None)
 
-            # If no group provided, query it from the projects table
+            if not username:
+                course_owner_username = self.sql_session.get_project_owner(course_name) if hasattr(self.sql_session, 'get_project_owner') else None
+                if course_owner_username:
+                    username = course_owner_username
             if not group:
                 group = self.sql_session.get_project_group(course_name) if hasattr(self.sql_session, 'get_project_group') else None
                 if group:
@@ -180,16 +184,16 @@ class Ingest:
                 f"In top of /ingest route. course: {course_name}, s3paths: {s3_paths}, readable_filename: {readable_filename}, base_url: {base_url}, url: {url}, content: {content}, doc_groups: {doc_groups}, group: {group}"
             )
             success_fail_dict = self.run_ingest(course_name, s3_paths, base_url, url, readable_filename, content,
-                                                doc_groups, force_embeddings, group=group)
+                                                doc_groups, force_embeddings, group=group, username=username)
             for retry_num in range(1, 3):
                 if isinstance(success_fail_dict, str):  # TODO: What does this indicate?
                     success_fail_dict = self.run_ingest(course_name, s3_paths, base_url, url, readable_filename, content,
-                                                        doc_groups,force_embeddings)
+                                                        doc_groups,force_embeddings, group=group, username=username)
                     time.sleep(13 * retry_num)  # max is 65
                 elif success_fail_dict['failure_ingest']:
                     logging.error(f"Ingest failure -- Retry attempt {retry_num}. File: {success_fail_dict}")
                     success_fail_dict = self.run_ingest(course_name, s3_paths, base_url, url, readable_filename, content,
-                                                        doc_groups,force_embeddings)
+                                                        doc_groups,force_embeddings, group=group, username=username)
                     time.sleep(13 * retry_num)  # max is 65
                 else:
                     break
@@ -218,22 +222,22 @@ class Ingest:
             return json.dumps(success_fail_dict)
 
     def run_ingest(self, course_name, s3_paths, base_url, url, readable_filename, content, document_groups,
-                   force_embeddings=False, group: str | None = None):
+                   force_embeddings=False, group: str | None = None, username: str | None = None):
         """Routes ingest jobs based on the input data -> webscrape, url, readable_filename"""
         if content:
             return self.ingest_single_web_text(course_name, base_url, url, content, readable_filename,
-                                               groups=document_groups, force_embeddings=force_embeddings, group=group)
+                                               groups=document_groups, force_embeddings=force_embeddings, group=group, username=username)
         elif readable_filename == '':
             return self.bulk_ingest(course_name, s3_paths, base_url=base_url, url=url,
-                                    groups=document_groups, force_embeddings=force_embeddings, group=group)
+                                    groups=document_groups, force_embeddings=force_embeddings, group=group, username=username)
         else:
             return self.bulk_ingest(course_name, s3_paths, base_url=base_url, url=url,
-                                    groups=document_groups, readable_filename=readable_filename, force_embeddings=force_embeddings, group=group)
+                                    groups=document_groups, readable_filename=readable_filename, force_embeddings=force_embeddings, group=group, username=username)
 
     def bulk_ingest(self, course_name: str, s3_paths: Union[str, List[str]],
                   force_embeddings: bool, **kwargs) -> Dict[str, None | str | Dict[str, str]]:
         """Bulk ingest a list of s3 paths into the vectorstore, and also into the database."""
-        print(f"Top of bulk_ingest: ", kwargs)
+        logging.info("Top of bulk_ingest kwargs: %s", kwargs)
 
         def _ingest_single(ingest_method: Callable, s3_path: str, force_embeddings: bool, *args, **kwargs):
             """Handle running an arbitrary ingest function for an individual file."""
@@ -406,6 +410,8 @@ class Ingest:
                     logging.error(f"Error constructing group-specific embedding URL: {e}")
                     # Fall back to default URL on error
 
+            osc_username = kwargs.get('username', None)
+
             oai = OpenAIAPIProcessor(
                 input_prompts_list=input_texts,
                 request_url=embedding_request_url,
@@ -415,7 +421,8 @@ class Ingest:
                 token_encoding_name='cl100k_base',
                 max_attempts=self.embedding_max_attempts,
                 logging_level=logging.INFO,
-                model=self.embedding_model)
+                model=self.embedding_model,
+                osc_username=osc_username)
             asyncio.run(oai.process_api_requests_from_file())
             print(f"⏰ embeddings runtime: {(time.monotonic() - embeddings_start_time):.2f} seconds")
             embeddings_dict: dict[str, List[float]] = {
@@ -816,7 +823,7 @@ class Ingest:
             # print(texts)
             os.remove(file_path)
 
-            success_or_failure = self.split_and_upload(texts=texts, metadatas=metadatas, force_embeddings=force_embeddings)
+            success_or_failure = self.split_and_upload(texts=texts, metadatas=metadatas, force_embeddings=force_embeddings, **kwargs)
             print("Python ingest: ", success_or_failure)
             return success_or_failure
 
@@ -1365,7 +1372,7 @@ class Ingest:
             sentry_sdk.capture_exception(e)
             return str(err)
 
-    def ingest_github(self, github_url: str, course_name: str, force_embeddings: bool) -> str:
+    def ingest_github(self, github_url: str, course_name: str, force_embeddings: bool, **kwargs) -> str:
         """
         Clones the given GitHub URL and uses Langchain to load data.
         1. Clone the repo
@@ -1398,7 +1405,7 @@ class Ingest:
                     'pagenumber': '',
                     'timestamp': '',
                 }
-                self.split_and_upload(texts=[texts], metadatas=[metadatas], force_embeddings=force_embeddings)
+                self.split_and_upload(texts=[texts], metadatas=[metadatas], force_embeddings=force_embeddings, **kwargs)
             return "Success"
         except Exception as e:
             err = f"❌❌ Error in (GITHUB ingest): `{inspect.currentframe().f_code.co_name}`: {e}\nTraceback:\n{traceback.format_exc()}"
