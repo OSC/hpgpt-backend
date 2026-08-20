@@ -42,7 +42,7 @@ GitPython==3.1.40
 beautifulsoup4==4.12.2
 sentry-sdk==2.21.0
 pdfplumber==0.11.0
-aio-pika==9.0.5
+aio-pika==9.6.2
 
 # AI & core services
 nomic==3.4.1
