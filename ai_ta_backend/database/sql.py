@@ -672,36 +672,79 @@ class SQLDatabase:
 
 
     def getWeeklyTrends(self, project_name: str) -> List[WeeklyMetric]:
-        with self.get_session() as session:
-            response = session.query(func.calculate_weekly_trends(project_name)).all()
-            if response and hasattr(response, 'data'):
-                return [
-                    WeeklyMetric(current_week_value=item['current_week_value'],
-                                 metric_name=item['metric_name'],
-                                 percentage_change=item['percentage_change'],
-                                 previous_week_value=item['previous_week_value']) for item in response.data
-                ]
+        try:
+            with self.get_session() as session:
+                response = session.query(func.calculate_weekly_trends(project_name)).all()
+
+                if not response:
+                    return []
+
+                metrics = []
+                for row in response:
+                    raw_str = str(row[0])
+
+                    # Format: '(metric_name,current,previous,change)'
+                    if raw_str.startswith('(') and raw_str.endswith(')'):
+                        inner = raw_str[1:-1]
+                        parts = inner.split(',', 3)
+                        if len(parts) == 4:
+                            metric_name = parts[0].strip().strip("'\"")
+                            current = int(parts[1]) if parts[1] else 0
+                            previous = int(parts[2]) if parts[2] else 0
+                            change = float(parts[3]) if parts[3] and parts[3] != '' else 0.0
+
+                            metrics.append(
+                                WeeklyMetric(
+                                    metric_name=metric_name,
+                                    current_week_value=current,
+                                    previous_week_value=previous,
+                                    percentage_change=change
+                                )
+                            )
+
+                return metrics
+
+        except Exception as e:
+            print(f"Error fetching weekly trends for {project_name}: {str(e)}")
 
         return []
-
 
     def getModelUsageCounts(self, project_name: str) -> List[ModelUsage]:
-        with self.get_session() as session:
-            response = session.query(func.count_models_by_project(project_name)).all()
-            if response and hasattr(response, 'data'):
-                total_count = sum(item['count'] for item in response.data if item.get('model'))
+        try:
+            with self.get_session() as session:
+                response = session.query(func.count_models_by_project(project_name)).all()
+
+                if not response:
+                    return []
 
                 model_counts = []
-                for item in response.data:
-                    if item.get('model'):
-                        percentage = round((item['count'] / total_count * 100), 2) if total_count > 0 else 0
-                        model_counts.append(
-                            ModelUsage(model_name=item['model'], count=item['count'], percentage=percentage))
+                total_count = 0
 
-                return model_counts
+                for row in response:
+                    raw_str = str(row[0])
+
+                    if raw_str.startswith('(') and raw_str.endswith(')'):
+                        inner = raw_str[1:-1]
+                        parts = inner.split(',', 1)
+                        if len(parts) == 2:
+                            model_name = parts[0].strip()
+                            count = int(parts[1].strip())
+                            total_count += count
+                            model_counts.append((model_name, count))
+
+                result = []
+                for model_name, count in model_counts:
+                    percentage = round((count / total_count * 100), 2) if total_count > 0 else 0
+                    result.append(
+                        ModelUsage(model_name=model_name, count=count, percentage=percentage)
+                    )
+
+                return result
+
+        except Exception as e:
+            print(f"Error fetching model usage counts for {project_name}: {str(e)}")
 
         return []
-
 
     def getAllProjects(self):
         query = (
